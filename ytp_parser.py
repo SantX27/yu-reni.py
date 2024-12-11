@@ -10,7 +10,7 @@ def readExtractYPF(folder_path): #TODO everything
     if not os.path.exists(ypf_path):
         # We didn't find the file
         print(f"Can't find {ypf_path}, ERROR!")
-        return 1
+        return False
     
     with open(ypf_path, 'rb') as f:
         ypf_hex = memoryview(f.read())
@@ -74,7 +74,7 @@ def readExtractYSTL(folder_path, caption):
     if not os.path.exists(yst_list_path):
         # We didn't find the file
         print(f"Can't find {yst_list_path}, ERROR!")
-        return 1
+        return False
     
     with open(yst_list_path, 'rb') as f:
         yst_hex = memoryview(f.read())
@@ -114,7 +114,7 @@ def readExtractYSTL(folder_path, caption):
         }
 
         # The SDK uses a different format
-        if caption != "(タイトル名)":
+        if not ("(タイトル名)" in caption or "Eroge!" in caption):
             script_fmt = f"<2i{script_dict['path_length']}sq3i"
             script_unpack = struct.unpack(script_fmt, script_hex[script_cur:struct.calcsize(script_fmt)+script_cur])
             script_dict.update({
@@ -146,7 +146,7 @@ def readExtractYSLB(folder_path):
     if not os.path.exists(ysl_path):
         print(f"Can't find {ysl_path}, ERROR!")
         # We didn't find the file
-        return 1
+        return False
     
     with open(ysl_path, 'rb') as f:
         ysl_hex = memoryview(f.read())
@@ -206,7 +206,7 @@ def readExtractYSVR(folder_path):
     if not os.path.exists(ysv_path):
         # We didn't find the file
         print(f"Can't find {ysv_path}, ERROR!")
-        return 1
+        return False
     
     with open(ysv_path, 'rb') as f:
         ysv_hex = f.read()
@@ -257,7 +257,7 @@ def readExtractYSVR(folder_path):
 
         match var_dict['type']:
             case 0: type_unpack = ""  # Value None
-            case 1: type_unpack = "q" # Value q
+            case 1: type_unpack = "Q" # Value Q
             case 2: type_unpack = "d" # Value d
             case 3: type_unpack = "H" # expr_length H
 
@@ -296,7 +296,7 @@ def readExtractYSCF(folder_path):
     if not os.path.exists(ystcfg_path):
         # We didn't find the file
         print(f"Can't find {ystcfg_path}, ERROR!")
-        return 1
+        return False
     
     with open(ystcfg_path, 'rb') as f:
         yst_hex = memoryview(f.read())
@@ -327,7 +327,7 @@ def readExtractYSCF(folder_path):
     caption_start = bytes(yst_hex[::-1]).index(b'\x00')
     caption = bytes((yst_hex[::-1][:caption_start])[::-1]).decode("cp932")
 
-    if caption != "(タイトル名)":
+    if not ("(タイトル名)" in caption or "Eroge!" in caption):
         header_fmt = "<4si4x4i8B4B5i3i4xh"
         header_hex = yst_hex[:struct.calcsize(header_fmt)]
         header_unpack = struct.unpack(header_fmt, header_hex)
@@ -402,7 +402,7 @@ def readExtractYSTB(folder_path):
     if not os.path.exists(yst_path):
         # We didn't find the file
         print(f"Can't find {yst_path}, ERROR!")
-        return 1
+        return False
     
     with open(yst_path, 'rb') as f:
         yst_hex = memoryview(f.read())
@@ -430,7 +430,6 @@ def readExtractYSTB(folder_path):
         'line_num_size' : header_unpack[6],
         'instructions' : []
     }
-
     # Finding XOR key.
     # In the instruction list, END is always placed at the end (duh), and it's values are always
     # 0C 00 00 00. By XORing it back, we can get the XOR decryption key.
@@ -568,7 +567,7 @@ def readExtractYSCM(folder_path):
     if not os.path.exists(ysc_path):
         # We didn't find the file
         print(f"Can't find {ysc_path}, ERROR!")
-        return 1
+        return False
     
     with open(ysc_path, 'rb') as f:
         ysc_hex = memoryview(f.read())

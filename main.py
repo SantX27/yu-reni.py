@@ -4,16 +4,19 @@ import os
 import argparse
 from ytp_parser import *
 from expr_parser import *
+import yu 
 from func import *
 
 if __name__ == "__main__":
     print("YTP_NEXT v4.2.0")
     print("---------------")
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input', dest='input', type=str, required=True, help='Folder that contains the decrypted yu-ris files')
+    parser.add_argument('-i', '--input', dest='input', type=str, required=True, help='Folder that contains the yu-ris files')
     parser.add_argument('-o', '--output', dest='output', type=str, required=True, help='Folder where to drop the generated ren\'py files')
-    #parser.add_argument('-d', '--debug', action='store_true', help='Let the program yap about what it\'s doing behind the scenes')
+    parser.add_argument('-d', '--debug', action='store_true', help='Let the program yap about what it\'s doing behind the scenes')
     args = parser.parse_args()
+
+    project_dir = os.path.dirname(os.path.realpath(__file__))
 
     # Sanity check since the user might be insane
     if not os.path.exists(args.input):
@@ -27,79 +30,77 @@ if __name__ == "__main__":
     YSVR = readExtractYSVR(args.input)
     YSCM = readExtractYSCM(args.input)
 
-    with open(os.path.join(args.output, "yst_list.ytp"), 'w') as f:
-        f.write(prettyDict(YSTL))
+    if args.debug:
+        debug_path = os.path.join(project_dir, "debug", sanitizePath(YSCF['caption']))
+        makeDirs(debug_path)
 
-    with open(os.path.join(args.output,"ysl.ytp"), 'w') as f:
-        f.write(prettyDict(YSLB))
 
-    with open(os.path.join(args.output, "ysv.ytp"), 'w') as f:
-        f.write(prettyDict(YSVR))
+        with open(os.path.join(debug_path, "yst_list.ytp"), 'w') as f:
+            f.write(prettyDict(YSTL))
 
-    with open(os.path.join(args.output, "yscfg.ytp"), 'w') as f:
-        f.write(prettyDict(YSCF))
+        with open(os.path.join(debug_path,"ysl.ytp"), 'w') as f:
+            f.write(prettyDict(YSLB))
 
-    with open(os.path.join(args.output, "ysc.ytp"), 'w') as f:
-        f.write(prettyDict(YSCM))
+        with open(os.path.join(debug_path, "ysv.ytp"), 'w') as f:
+            f.write(prettyDict(YSVR))
+
+        with open(os.path.join(debug_path, "yscfg.ytp"), 'w') as f:
+            f.write(prettyDict(YSCF))
+
+        with open(os.path.join(debug_path, "ysc.ytp"), 'w') as f:
+            f.write(prettyDict(YSCM))
 
     # Read all yst00*.ybn files, excluding eris
-    for num_script, script in enumerate(YSTL['scripts']):
-        if "eris" in YSTL['scripts'][num_script]['path']:
-            print("Eris file, skipping...")
+    shared_resources = {
+        'bg_list': [],
+        'ev_list': [],
+        'st_list': [],
+        'sound_list': []
+    }
+
+    for script in YSTL['scripts']:
+        if not "userscript" in script['path']:
             pass
         else:
             yst_index_name = "yst" + str(script['index']).zfill(5) + ".ybn"
             
             YSTB = readExtractYSTB(os.path.join(args.input, yst_index_name))
             
-            with open(os.path.join(args.output, yst_index_name + ".ytp"), 'w') as f:
-                f.write(prettyDict(YSTB))
-            yap(f"Wrote {os.path.join(args.output, yst_index_name + ".ytp")}", True)
+            if args.debug:
+                debug_path_script = os.path.join(debug_path, *script['path'].split("\\")[2:-1])
+                makeDirs(debug_path_script)
 
-            try:
-                if YSTB != 1:
-                    parsed = instructionParser(script['index'], YSTB, YSCM, YSTL, YSVR, YSLB)
-                        
-                    yurisPrint(parsed)
-                    with open(os.path.join(args.output, yst_index_name + ".ytp.parsed"), 'w') as f:
-                        #f.write(prettyDict(parsed))
+                debug_name_script = str(script['index']).zfill(5) + "_" + script['path'].split("\\")[-1]
+
+                with open(os.path.join(debug_path_script, debug_name_script + ".ytp"), 'w') as f:
+                    f.write(prettyDict(YSTB))
+                yap(f"Wrote {os.path.join(debug_path_script, debug_name_script)}", True)
+
+            # try:
+            if YSTB is not False:
+                parsed = instructionParser(script['index'], YSTB, YSCM, YSTL, YSVR, YSLB)
+                
+                if args.debug:
+                    with open(os.path.join(debug_path_script, debug_name_script + ".yuris"), 'w') as f:
                         f.write(yurisPrint(parsed))
-                    yap(f"Wrote {os.path.join(args.output, yst_index_name + ".ytp.parsed")}", True)
+                    yap(f"Wrote {os.path.join(debug_path_script, debug_name_script + ".yuris")}", True)
 
-            except Exception as e:
-                print(e)
-                pass
+                    with open(os.path.join(debug_path_script, debug_name_script + ".parsed"), 'w') as f:
+                        f.write(prettyDict(parsed))
+                    yap(f"Wrote {os.path.join(debug_path_script, debug_name_script + ".parsed")}", True)
+                
+                #real ytp
+                renpy, shared_resources = yu.topy(parsed, shared_resources)
+                with open(os.path.join(args.output, os.path.splitext(debug_name_script)[0] + ".rpy"), 'w') as f:
+                    f.write(renpy)
+                yap(f"Wrote {os.path.join(args.output, os.path.splitext(debug_name_script)[0] + ".rpy")}", True)
 
-    # print(prettyDict(instructionParser(YSTB, YSCM, YSTL)))
-            
-    
+    #writing the shared resources (man those functions are trash)
+    shared_resources['bg_list'] = list(dict.fromkeys(shared_resources['bg_list']))
+    shared_resources['ev_list'] = list(dict.fromkeys(shared_resources['ev_list']))
+    shared_resources['st_list'] = list(dict.fromkeys(shared_resources['st_list']))
 
-    
-    
-    #read_extract_ystlist(args.input)
-    #ysl_decode = read_extract_ysl(args.input)
-    #print(search_value(108, 'scriptindex', ysl_decode['labels']))
-    
-    #read_extract_yst(f"{args.input}/yst00108.ybn")
-    
-    # print([item for item in yst_list_decode['scripts'] if item['index'] == 100])
-    # print([item for item in ysl_decode['labels'] if item['scriptindex'] == 100])
-
-    # print(search_value(115, 'index', yst_list_decode['scripts']))
-    # print(search_value(115, 'scriptindex', ysl_decode['labels']))
-    
-    # print([element for element in yst_list_decode['scripts'] if ['index'] == 114])
-    # search(index, yst_list_decode['scripts'])
-
-    # yst_paths = read_extract_yst_list(args.input)
-
-    # for yst_num, yst_path in enumerate(yst_paths):
-    #     file_name = yst_path.split("\\")[-1]
-    #     file_path = yst_path.split("\\")[:-1]
-
-    #     if "userscript" in file_path:
-    #         og_file = os.path.join(args.input, "yst" + str(yst_num).zfill(5) + ".txt")
-    #         print(f"Found: {og_file} - {file_name}")
-
-    #         decode_yst_file(og_file)
-            # shutil.copy(og_file, args.output)
+    with open(os.path.join(project_dir, "renpy_resources.rpy"), 'r') as f:
+        helper_file = f.read()
+    with open(os.path.join(args.output, "renpy_resources.rpy"), 'w') as f:
+        f.write(f"{helper_file}\n    shared_resources = {repr(shared_resources)}\n    yu_bg(shared_resources)\n    yu_ev(shared_resources)\n    yu_st(shared_resources)")

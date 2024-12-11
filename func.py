@@ -1,3 +1,4 @@
+import os
 import json
 from itertools import cycle
 
@@ -59,3 +60,14 @@ def yurisPrint(script):
 def rolling_xor(cryptedstring, key):
     '''Unpacks the single hex digits, XOR them together, packs them and then returns the xor-decrypted string'''
     return ''.join(f"{(int(c, 16)^int(k, 16)):x}" for c,k in zip(cryptedstring, cycle(key)))
+
+def sanitizePath(path): #https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
+    return "".join(x for x in path if x.isalnum())
+
+def makeDirs(path):
+        if not os.path.exists(path):
+            try:
+                os.makedirs(path, exist_ok=True)
+                print(f"Directory {path} created successfully")
+            except OSError as error:
+                print(f"Directory {path} cannot be created!")

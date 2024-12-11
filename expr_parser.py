@@ -101,5 +101,3 @@ def instructionParser(script_index, YSTB, YSCM, YSTL, YSVR, YSLB):
                 attribute_dict['attrib_values'].append(value)
             parsed_script[-1]['attributes'].append(attribute_dict)
     return parsed_script
-
-    #YSTB['instructions'][num_instruction]['attributes'][num_attribute]['attrib_val'][0]['value']
